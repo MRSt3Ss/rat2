@@ -442,7 +442,12 @@ if __name__ == '__main__':
     logger.info(f"Starting Flask server on port {FLASK_PORT}")
     logger.info(f"Debug mode: {DEBUG}")
     
-    if DEBUG:
+    # Untuk production di Railway, gunakan eventlet langsung
+    if os.environ.get('RAILWAY_ENVIRONMENT') == 'production':
+        import eventlet
+        eventlet.wsgi.server(eventlet.listen(('0.0.0.0', FLASK_PORT)), app)
+    else:
+        socketio.run(app, host='0.0.0.0', port=FLASK_PORT, debug=DEBUG)
         socketio.run(app, host='0.0.0.0', port=FLASK_PORT, debug=True)
     else:
         socketio.run(app, host='0.0.0.0', port=FLASK_PORT, debug=False)
